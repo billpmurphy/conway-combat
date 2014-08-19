@@ -27,17 +27,18 @@ renderBoard :: (Int, Int) -> (Int, Int) -> Universe2D Cell -> String
 renderBoard x y = unlines . map (concatMap renderCell) . takeRange2D x y
   where renderCell Red  = "1"
         renderCell Blue = "2"
-        renderCell Dead = "_"
+        renderCell Dead = "."
 
+-- Run 100 iterations and print the intermediate steps
 gameLoop :: Int -> Universe2D Cell -> IO (Universe2D Cell)
-gameLoop t u = do
+gameLoop n u = do
     threadDelay (10 ^ 6)
     putStrLn ""
-    print t
+    print n
     putStr $ renderBoard (-20, -20) (20, 20) u
-    if t <= 1
+    if n <= 1
         then return u
-        else gameLoop (t-1) (u =>> immigrationRule)
+        else gameLoop (n-1) (u =>> immigrationRule)
 
 
 -- Immigration game as a 2-player game:
@@ -58,6 +59,10 @@ tabulate u = [pair Red u, pair Blue u]
   where count c  = length . filter (== c) . concat . takeRange2D (-8, -8) (8, 8)
         pair c x = (c, count c x)
 
+-- Run 100 iterations and return the result
+runGame :: [[PlayerCell]] -> [[PlayerCell]] -> [(Cell, Int)]
+runGame p = tabulate . run 100 . setup p
+  where run n u = if n <= 1 then u else run (n-1) (u =>> immigrationRule)
 
 -- Example: Gosper glider vs f-pentomino
 
@@ -73,6 +78,6 @@ player2 = [ [Empty, Empty, Empty]
           , [Empty, Full,  Empty] ]
 
 main :: IO ()
-main = do
-    game <- gameLoop 100 $ setup player1 player2
-    print $ tabulate game
+main = print $ runGame player1 player2
+--    game <- gameLoop 100 $ setup player1 player2
+--    print $ tabulate game
