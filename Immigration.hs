@@ -16,15 +16,15 @@ data Cell = Dead | Red | Blue
 -- Succession rules for the immigration game
 immigrationRule :: Universe2D Cell -> Cell
 immigrationRule u
-    | length nc == 2            = extract u
-    | length nc == 3 && moreRed = Red
-    | length nc == 3            = Blue
-    | otherwise                 = Dead
-  where nc = filter (/= Dead) (neighbors u)
-        moreRed = (length $ filter (== Red) nc) > (length $ filter (== Blue) nc)
+    | length aliveNeighbors == 2           = extract u
+    | length aliveNeighbors == 3 && twoRed = Red
+    | length aliveNeighbors == 3           = Blue
+    | otherwise                = Dead
+  where aliveNeighbors = filter (/= Dead) (neighbors u)
+        twoRed         = length (filter (== Red) aliveNeighbors) >= 2
 
 renderBoard :: (Int, Int) -> (Int, Int) -> Universe2D Cell -> String
-renderBoard x y = unlines . map concat . map (map renderCell) . takeRange2D x y
+renderBoard x y = unlines . map (concatMap renderCell) . takeRange2D x y
   where renderCell Red  = "1"
         renderCell Blue = "2"
         renderCell Dead = "_"

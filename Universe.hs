@@ -10,7 +10,6 @@ module Universe where
 import Control.Applicative (pure)
 import Control.Comonad (Comonad(..))
 
-
 -- Universe: a comonad/zipper infinite list
 data Universe a = Universe [a] a [a]
 
@@ -71,7 +70,7 @@ takeRange2D (x0, y0) (x1, y1)
     = takeRange (y0, y1) . fmap (takeRange (x0, x1)) . getUniverse2D
 
 -- Get the 8 cells surrounding the center cell in a Universe2D
-neighbors :: (Universe2D a) -> [a]
+neighbors :: Universe2D a -> [a]
 neighbors u =
     [ nearest3 . extract . left                 -- 3 cells in row above
     , pure     . extract . left  . extract      -- cell to the left
