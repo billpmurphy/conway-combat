@@ -6,7 +6,7 @@
 import Control.Monad (liftM, replicateM)
 import Control.Monad.Random (MonadRandom, getRandomR)
 import Data.List (sortBy, sort, nub)
-import Data.Map as M (toList, Map(..), fromListWith)
+import qualified Data.Map as M (toList, Map(..), fromListWith)
 import Data.Ord (comparing)
 
 import Immigration
