@@ -54,6 +54,7 @@ swap :: PlayerCell -> PlayerCell
 swap Empty = Full
 swap Full  = Empty
 
+-- A player input is a 4x4 grid of PlayerCells
 type Input = [[PlayerCell]]
 
 -- opposite of concat for Inputs
@@ -61,32 +62,37 @@ cut :: [PlayerCell] -> Input
 cut l = [take 4 l,          take 4 $ drop 4  l,
          take 4 $ drop 8 l, take 4 $ drop 12 l]
 
+-- Replace one value in an Input using its index
 swapAt :: Int -> Input -> Input
 swapAt i = cut . (\l -> take i l ++ (swap (l!!i) : drop (i+1) l)) . concat
 
+-- Render an Input for printing
 pprint :: Input -> String
 pprint = unlines . (map . map) (\x -> if x == Full then 'X' else '.')
 
+-- The default Input is a blank grid
 blankPlayer :: Input
 blankPlayer = replicate 4 $ replicate 4 Empty
 
-gameLength :: Int
-gameLength = 10
-
+-- Convert this list representation to the comonadic representation
 setup :: Input -> Input -> Universe2D Cell
 setup p1 p2 = fromList2D Dead (player1 ++ player2)
   where player1 = replace Red p1
         player2 = replace Blue $ reverse p2
         replace color = (map . map) (\x -> if x == Full then color else Dead)
 
+-- Compute scores after a game
 scores :: Universe2D Cell -> [(Cell, Int)]
 scores u = [pair Red u, pair Blue u]
   where count c  = length . filter (== c) . concat . takeRange2D (-8, -8) (8, 8)
         pair color x = (color, count color x)
 
+gameLength :: Int
+gameLength = 100
+
 -- Run 100 iterations and return the result
 runGame :: Input -> Input -> (Int, Int)
-runGame p = tabulate . scores . run 100 . setup p
+runGame p = tabulate . scores . run gameLength . setup p
   where run n u = if n <= 1 then u else run (n-1) (u =>> immigrationRule)
         tabulate r = (fromMaybe 0 $ lookup Red r, fromMaybe 0 $ lookup Blue r)
 
