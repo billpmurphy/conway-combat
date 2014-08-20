@@ -56,6 +56,14 @@ swap Full  = Empty
 
 type Input = [[PlayerCell]]
 
+-- opposite of concat for Inputs
+cut :: [PlayerCell] -> Input
+cut l = [take 4 l,          take 4 $ drop 4  l,
+         take 4 $ drop 8 l, take 4 $ drop 12 l]
+
+swapAt :: Int -> Input -> Input
+swapAt i = cut . (\l -> take i l ++ (swap (l!!i) : drop (i+1) l)) . concat
+
 pprint :: Input -> String
 pprint = unlines . (map . map) (\x -> if x == Full then 'X' else '.')
 

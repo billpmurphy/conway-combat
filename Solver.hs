@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 {- Find optimal starting positions for the 2-player Immigration Game using
  - genetic algorithms. Obviously, since the game is implemented using
  - comonadic infinite lists, this isn't exactly efficient, but it is fun.
@@ -11,38 +13,40 @@ import Data.Ord (comparing)
 
 import Immigration
 
+type MutFactor = Int
+type Fitness = Int
 
--- Randomly mutate a configuration, flipping a certain number of bits
-mutate:: MonadRandom m => Int -> Input -> m Input
-mutate 0 p = return p
-mutate n p = do
-    rand <- getRandomR (0, 15)
-    mutate (n-1) $ repl rand p
-  where repl i = cut . (\l -> take i l ++ (swap (l!!i) : drop (i+1) l)) . concat
-        cut  l = [take 4 l,          take 4 $ drop 4  l,
-                  take 4 $ drop 8 l, take 4 $ drop 12 l]
+class Gene a where
+    mutate    :: (Gene a, MonadRandom m) => MutFactor -> a -> m a
+    fitness   :: (Gene a, MonadRandom m) => [a] -> m (M.Map a Fitness)
+    offspring :: (Gene a, MonadRandom m) => Int -> MutFactor -> a -> m [a]
+    nextGen   :: (Gene a, MonadRandom m) => Int -> MutFactor -> [a] -> m [a]
 
--- Produce the offspring of a configuration by mutating it
-offspring :: MonadRandom m => Int -> Int -> Input -> m [Input]
-offspring children mut = sequence . map (mutate mut) . replicate children
+instance Gene Input where
+    mutate 0 p = return p
+    mutate n p = do
+        rand <- getRandomR (0, 15)
+        mutate (n-1) $ swapAt rand p
+
+    -- Play each configuration against each other to obtain their fitness values
+    fitness = return . M.fromListWith (+) . rounds
+      where round (a:b:_) = let g = runGame a b in [(a, fst g), (b, snd g)]
+            rounds = concat . map round . matchups
+            matchups = filter(\x -> nub x == x) . nub . map sort . replicateM 2
+
+    -- Produce the offspring of a configuration by mutating it
+    offspring children mut = sequence . map (mutate mut) . replicate children
+
+    -- Produce the next generation, using the fitness scores from a round-robin
+    nextGen par mut ins = do
+        fit <- fitness ins
+        let parents = map fst . take par . sortBy (comparing snd) $ M.toList fit
+        next <- sequence $ map (offspring (length ins `quot` par) mut) parents
+        return $ liftM concat next
 
 -- First generation: n random configurations
 firstGen :: MonadRandom m => Int -> m [Input]
 firstGen n = sequence . map (mutate 500) $ replicate n blankPlayer
-
--- Play each configuration against each other to obtain their fitness values
-getFitness :: [Input] -> M.Map Input Int
-getFitness = M.fromListWith (+) . rounds
-  where round (a:b:_) = let game = runGame a b in [(a, fst game), (b, snd game)]
-        rounds = concat . map round . matchups
-        matchups = filter(\x -> nub x == x) . nub . map sort . replicateM 2
-
--- Produce the next generation, using the fitness scores from a round-robin
-nextGen :: MonadRandom m => Int -> Int -> [Input] -> m [Input]
-nextGen par mut ins = liftM concat . sequence
-                    . map (offspring (length ins `quot` par) mut)
-                    . map fst . take par . sortBy (comparing snd) . M.toList
-                    $ getFitness ins
 
 
 -- Simple example: iterations = 3, population = 3, mutations = 3, parents = 1
